@@ -1,12 +1,11 @@
 package com.example.domain.repository
 
 import com.example.domain.entity.Message
+import com.example.domain.utils.ResultWrapper
 import kotlinx.coroutines.flow.Flow
 
 interface MessageRepository {
-
-    suspend fun sendMessage(message: Message): Result<Unit>
+    suspend fun sendMessage(message: Message): ResultWrapper<Unit>
     fun observeMessages(): Flow<List<Message>>
-    suspend fun retryMessage(message: Message): Result<Unit>
-
+    suspend fun retryMessage(message: Message): ResultWrapper<Unit>
 }
