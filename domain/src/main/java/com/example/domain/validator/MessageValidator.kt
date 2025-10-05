@@ -6,16 +6,13 @@ import com.example.domain.utils.ResultWrapper
 
 object MessageValidator {
 
-    fun validate(message: Message): ResultWrapper<Unit> {
-
-        if (message.mediaUrls.size > 10) {
+    fun validate(message: Message, mediaUris: List<String>? = null): ResultWrapper<Unit> {
+        if (mediaUris != null && mediaUris.size > 10) {
             return ResultWrapper.Error(DomainException.MediaLimitExceededException())
         }
-
-        if (message.content.isNullOrBlank() && message.mediaUrls.isEmpty()) {
+        if (message.content.isNullOrBlank() && message.mediaUrls.isEmpty() && (mediaUris == null || mediaUris.isEmpty())) {
             return ResultWrapper.Error(DomainException.EmptyMessageException())
         }
-
         return ResultWrapper.Success(Unit)
     }
 

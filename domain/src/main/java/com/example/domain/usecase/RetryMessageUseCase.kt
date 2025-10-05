@@ -5,7 +5,8 @@ import com.example.domain.repository.MessageRepository
 import com.example.domain.utils.ResultWrapper
 import com.example.domain.validator.MessageValidator
 
-class RetryMessageUseCase(private val repository: MessageRepository) {
+
+class RetryMessageUseCase (private val repository: MessageRepository) {
 
     suspend operator fun invoke(message: Message): ResultWrapper<Unit> {
 

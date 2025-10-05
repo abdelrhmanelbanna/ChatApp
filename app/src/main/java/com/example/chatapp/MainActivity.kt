@@ -12,6 +12,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.chatapp.ui.theme.ChatAppTheme
+import com.example.domain.repository.UserRepository
+import com.example.domain.usecase.GetUserUseCase
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -27,8 +29,16 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+
+
     }
 }
+
+
+
+
+
+
 
 @Composable
 fun Greeting(name: String, modifier: Modifier = Modifier) {

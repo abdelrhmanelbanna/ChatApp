@@ -1,12 +1,10 @@
-package com.example.domain.entity
+package com.example.data.model
 
 import kotlinx.serialization.Serializable
 
-
 @Serializable
-data class User(
+data class UserDto(
     val id: String,
     val username: String,
-    val profileImage: String
+    val profile_image: String
 )
-
