@@ -37,4 +37,9 @@ object UseCaseModule {
     fun provideRetryMessageUseCase(
         messageRepository: MessageRepository
     ): RetryMessageUseCase = RetryMessageUseCase(messageRepository)
+
+    @Provides
+    fun provideUploadProfileImageUseCase(
+        userRepository: UserRepository
+    ): UploadProfileImageUseCase = UploadProfileImageUseCase(userRepository)
 }

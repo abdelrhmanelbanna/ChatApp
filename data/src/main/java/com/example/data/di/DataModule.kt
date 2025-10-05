@@ -16,12 +16,25 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.auth.status.SessionSource
+import io.github.jan.supabase.storage.Storage
+import io.github.jan.supabase.storage.storage
 import javax.inject.Named
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
 object DataModule {
+
+
+    @Provides
+    @Singleton
+    fun provideStorage(supabaseClient: SupabaseClient): Storage {
+        return supabaseClient.storage
+    }
+
+
+
 
     @Provides
     @Singleton
@@ -61,9 +74,10 @@ object DataModule {
     @Singleton
     fun provideUserDatasource(
         supabaseClientProvider: SupabaseClientProvider,
+        storage: Storage,
         @ApplicationContext context: Context
     ): UserDatasource {
-        return UserDatasourceImpl(supabaseClientProvider, context)
+        return UserDatasourceImpl(supabaseClientProvider, storage , context)
     }
 
     @Provides

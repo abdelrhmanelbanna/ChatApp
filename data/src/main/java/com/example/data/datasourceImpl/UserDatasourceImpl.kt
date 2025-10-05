@@ -1,20 +1,24 @@
 package com.example.data.datasourceImpl
 
 import android.content.Context
+import android.net.Uri
 import com.example.data.datasource.UserDatasource
 import com.example.data.model.UserDto
 import com.example.data.webservice.SupabaseClientProvider
 import com.example.domain.exceptions.DomainException
 import com.example.domain.utils.ResultWrapper
+import dagger.hilt.android.qualifiers.ApplicationContext
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.storage.Storage
 import javax.inject.Inject
 
 
 
 class UserDatasourceImpl @Inject constructor(
     private val supabaseClientProvider: SupabaseClientProvider,
-    context: Context
+    private val storage: Storage,
+    @ApplicationContext private val context: Context
 ) : UserDatasource {
 
     private val client: Postgrest by lazy { supabaseClientProvider.client.postgrest }
@@ -36,4 +40,27 @@ class UserDatasourceImpl @Inject constructor(
             ResultWrapper.Error(DomainException.UserNotFoundException(e.message ?: "User not found"))
         }
     }
+
+    override suspend fun uploadProfileImage(uri: String): ResultWrapper<String> {
+        return try {
+            val parsedUri = Uri.parse(uri)
+            val inputStream = context.contentResolver.openInputStream(parsedUri)
+                ?: return ResultWrapper.Error(DomainException.UnknownException("Invalid image"))
+
+            val bytes = inputStream.use { it.readBytes() }
+            val path = "${parsedUri.lastPathSegment ?: System.currentTimeMillis()}.jpg"
+
+
+            storage.from("profile").upload(path, bytes)
+
+            val baseUrl = "https://yanmwvuaweddcsvewmln.supabase.co"
+            val url = "$baseUrl/storage/v1/object/public/profile/$path"
+
+            ResultWrapper.Success(url)
+        } catch (e: Exception) {
+            ResultWrapper.Error(DomainException.UnknownException(e.message ?: "Upload failed"))
+        }
+    }
+
+
 }

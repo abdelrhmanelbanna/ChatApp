@@ -1,4 +1,4 @@
-package com.example.chatapp.ui.theme
+package com.example.chatapp.splash.ui.theme
 
 import android.app.Activity
 import android.os.Build

@@ -1,5 +1,6 @@
 package com.example.chatapp.profileScreen
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -11,20 +12,25 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import com.example.chatapp.ui.theme.ChatAppTheme
+import com.example.chatapp.chatScreen.ChatActivity
+import com.example.chatapp.profileScreen.ui.theme.ChatAppTheme
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class ProfileActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         enableEdgeToEdge()
+
         setContent {
             ChatAppTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+                ProfileScreen(
+                    onUserSaved = {
+                        startActivity(Intent(this, ChatActivity::class.java))
+                        finish()
+                    }
+                )
             }
         }
 
@@ -33,23 +39,12 @@ class ProfileActivity : ComponentActivity() {
 }
 
 
-
-
-
-
-
+@Preview(showBackground = true, showSystemUi = true)
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
+fun ProfileScreenPreview() {
     ChatAppTheme {
-        Greeting("Android")
+        ProfileScreen(
+            onUserSaved = {}
+        )
     }
 }

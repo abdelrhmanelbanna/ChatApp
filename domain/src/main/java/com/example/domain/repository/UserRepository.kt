@@ -6,4 +6,6 @@ import com.example.domain.utils.ResultWrapper
 interface UserRepository {
     suspend fun saveUser(user: User): ResultWrapper<Unit>
     suspend fun getUser(): ResultWrapper<User>
+
+    suspend fun uploadProfileImage(uri: String): ResultWrapper<String>
 }

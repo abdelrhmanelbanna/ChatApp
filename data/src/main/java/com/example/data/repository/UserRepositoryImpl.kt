@@ -25,4 +25,9 @@ class UserRepositoryImpl @Inject constructor(
             ResultWrapper.Loading -> ResultWrapper.Loading
         }
     }
+
+    override suspend fun uploadProfileImage(uri: String): ResultWrapper<String> {
+        return userDatasource.uploadProfileImage(uri)
+    }
+
 }

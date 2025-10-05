@@ -9,4 +9,6 @@ interface UserDatasource {
 
     suspend fun getUser(): ResultWrapper<UserDto>
 
+    suspend fun uploadProfileImage(uri: String): ResultWrapper<String>
+
 }

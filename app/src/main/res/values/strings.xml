@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">ChatApp</string>
+    <string name="title_activity_chat">ChatActivity</string>
+    <string name="title_activity_splash">SplashActivity</string>
+    <string name="title_activity_profile">ProfileActivity</string>
+
 </resources>
