@@ -1,4 +1,4 @@
-package com.example.chatapp
+package com.example.chatapp.profileScreen
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -12,10 +12,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.chatapp.ui.theme.ChatAppTheme
-import com.example.domain.repository.UserRepository
-import com.example.domain.usecase.GetUserUseCase
 
-class MainActivity : ComponentActivity() {
+class ProfileActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
