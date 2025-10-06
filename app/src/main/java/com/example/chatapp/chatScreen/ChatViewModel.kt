@@ -28,7 +28,7 @@ class ChatViewModel @Inject constructor(
     private val retryMessageUseCase: RetryMessageUseCase,
     private val getUserUseCase: GetUserUseCase,
     private val dataStoreManager: DataStoreManager,
-    @ApplicationContext private val context: AppContext
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ChatState())
@@ -37,26 +37,24 @@ class ChatViewModel @Inject constructor(
     private val _effect = Channel<ChatEffect>(Channel.BUFFERED)
     val effects = _effect.receiveAsFlow()
 
-    // cache current user info (loaded at start)
-    private var currentUserId: String? = null
-    private var currentUserName: String = "You"
-    private var currentUserProfileImage: String = ""
+    // current user as StateFlow to always get latest value
+    private val _currentUser = MutableStateFlow<User?>(null)
+    private val currentUser: User? get() = _currentUser.value
 
     init {
         viewModelScope.launch {
-            // try to fetch the stored user (if saved in your backend) or at least the dataStore id
-            currentUserId = dataStoreManager.getUserId().first()
-            // attempt to load user details
-            when (val r = getUserUseCase()) {
-                is ResultWrapper.Success -> {
-                    currentUserId = r.data.id
-                    currentUserName = r.data.username
-                    currentUserProfileImage = r.data.profileImage
+            // collect user id from DataStore and fetch user details
+            dataStoreManager.getUserId().collect { id ->
+                val safeId = id ?: UUID.randomUUID().toString()
+
+                val user: User = when (val r = getUserUseCase()) {
+                    is ResultWrapper.Success -> r.data as? User ?: User(safeId, "You", "")
+                    else -> User(safeId, "You", "")
                 }
-                else -> {
-                    // keep what we have (dataStore id)
-                }
+
+                _currentUser.value = user
             }
+
 
             startObservingMessages()
         }
@@ -65,7 +63,6 @@ class ChatViewModel @Inject constructor(
     private fun startObservingMessages() {
         viewModelScope.launch {
             observeMessagesUseCase().collect { list ->
-                // sort or map if needed (usecase already sorts)
                 _state.update { it.copy(messages = list) }
             }
         }
@@ -73,20 +70,24 @@ class ChatViewModel @Inject constructor(
 
     fun process(intent: ChatIntent) {
         when (intent) {
-            is ChatIntent.Start -> { /* nothing else here */ }
+            is ChatIntent.Start -> { /* do nothing */ }
+
             is ChatIntent.UpdateComposingText -> {
                 _state.update { it.copy(composingText = intent.text) }
             }
+
             is ChatIntent.PickImagesClicked -> {
                 viewModelScope.launch { _effect.send(ChatEffect.OpenImagePicker) }
             }
+
             is ChatIntent.ImagesSelected -> {
-                val limited = if (intent.uris.size > 10) intent.uris.take(10) else intent.uris
+                val limited = intent.uris.take(10)
                 _state.update { it.copy(selectedMediaUris = limited) }
                 if (intent.uris.size > 10) {
                     viewModelScope.launch { _effect.send(ChatEffect.ShowToast("يمكن إرسال حتى 10 صور فقط")) }
                 }
             }
+
             is ChatIntent.SendText -> {
                 val text = intent.text.trim()
                 viewModelScope.launch {
@@ -94,12 +95,14 @@ class ChatViewModel @Inject constructor(
                         _effect.send(ChatEffect.ShowToast("لا يمكن إرسال رسالة فارغة"))
                         return@launch
                     }
-                    // build Message domain object (optimistic)
+
+                    val user = currentUser ?: User(UUID.randomUUID().toString(), "You", "")
+
                     val message = Message(
                         id = UUID.randomUUID().toString(),
-                        userId = currentUserId ?: UUID.randomUUID().toString(),
-                        username = currentUserName,
-                        profileImage = currentUserProfileImage,
+                        userId = user.id,
+                        username = user.username,
+                        profileImage = user.profileImage,
                         content = if (text.isBlank()) null else text,
                         mediaUrls = emptyList(),
                         audioUrl = null,
@@ -107,7 +110,7 @@ class ChatViewModel @Inject constructor(
                         status = MessageStatus.SENDING
                     )
 
-                    // optimistic UI update
+                    // Optimistic UI
                     _state.update { old ->
                         old.copy(
                             messages = old.messages + message,
@@ -116,32 +119,40 @@ class ChatViewModel @Inject constructor(
                         )
                     }
 
-                    // enqueue background send via WorkManager helper
                     MessageSendManager.enqueueSend(
                         context = context,
                         message = message,
-                        mediaUris = _state.value.selectedMediaUris // already cleared above but we passed earlier state captured
+                        mediaUris = _state.value.selectedMediaUris
                     )
                 }
             }
+
             is ChatIntent.RetryMessage -> {
                 viewModelScope.launch {
-                    val message = _state.value.messages.find { it.id == intent.messageId }
-                    if (message == null) {
+                    val message = _state.value.messages.find { it.id == intent.messageId } ?: run {
                         _effect.send(ChatEffect.ShowToast("الرسالة غير موجودة"))
                         return@launch
                     }
 
-                    // optimistic mark sending
                     val updated = _state.value.messages.map {
                         if (it.id == message.id) it.copy(status = MessageStatus.SENDING) else it
                     }
                     _state.update { it.copy(messages = updated) }
 
-                    // Enqueue worker again (use mediaUrls if applicable)
-                    MessageSendManager.enqueueSend(context = context, message = message, mediaUris = message.mediaUrls)
+                    MessageSendManager.enqueueSend(
+                        context = context,
+                        message = message,
+                        mediaUris = message.mediaUrls
+                    )
                 }
             }
         }
     }
 }
+
+// Simple User model
+data class User(
+    val id: String,
+    val username: String,
+    val profileImage: String
+)

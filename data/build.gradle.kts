@@ -66,6 +66,9 @@ dependencies {
 
     // Ktor client
     implementation("io.ktor:ktor-client-android:3.3.0")
+    implementation("io.ktor:ktor-client-okhttp:3.3.0")
+
+
 
     // Kotlin Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")

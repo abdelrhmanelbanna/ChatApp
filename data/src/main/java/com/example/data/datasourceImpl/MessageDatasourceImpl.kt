@@ -31,25 +31,39 @@ class MessageDatasourceImpl @Inject constructor(
     private val client: Postgrest by lazy { supabaseClientProvider.client.postgrest }
     private val storage by lazy { supabaseClientProvider.client.storage }
 
-    override suspend fun sendMessage(message: MessageDto, mediaUris: List<String>?): ResultWrapper<Unit> {
+    override suspend fun sendMessage(
+        message: MessageDto,
+        mediaUris: List<String>?
+    ): ResultWrapper<Unit> {
         return try {
+
             if (mediaUris != null && mediaUris.size > 10) {
                 return ResultWrapper.Error(DomainException.MediaLimitExceededException())
             }
 
-            val updatedMessage = if (mediaUris != null && mediaUris.isNotEmpty()) {
-                val uploadedUrls = uploadMedia(mediaUris)
-                message.copy(media_urls = uploadedUrls)
+            val uploadedUrls = if (!mediaUris.isNullOrEmpty()) {
+                uploadMedia(mediaUris)
             } else {
-                message
+                emptyList()
             }
 
-            client.from("messages").insert(updatedMessage)
+            val messageToSend = message.copy(
+                media_urls = uploadedUrls,
+                status = MessageStatusDto.SENDING
+            )
+
+            client.from("messages").insert(messageToSend)
+
             ResultWrapper.Success(Unit)
         } catch (e: Exception) {
-            ResultWrapper.Error(DomainException.MessageSendFailedException(e.message ?: "Failed to send message"))
+            ResultWrapper.Error(
+                DomainException.MessageSendFailedException(
+                    e.message ?: "Failed to send message"
+                )
+            )
         }
     }
+
 
     private suspend fun uploadMedia(mediaUris: List<String>): List<String> {
         return runCatching {

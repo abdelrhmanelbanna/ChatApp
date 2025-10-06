@@ -1,6 +1,7 @@
 package com.example.chatapp.chatScreen.worker
 
 import android.content.Context
+import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
@@ -22,53 +23,66 @@ class SendMessageWorker @AssistedInject constructor(
 ) : CoroutineWorker(appContext, workerParams) {
 
     companion object {
-        private const val KEY_MEDIA_URIS = "media_uris"
+        const val KEY_MEDIA_URIS = "media_uris"
     }
 
-    override suspend fun doWork(): Result = coroutineScope {
-        // read input
-        val id = inputData.getString("message_id") ?: return@coroutineScope Result.failure()
-        val userId = inputData.getString("user_id") ?: ""
-        val username = inputData.getString("username") ?: ""
-        val profileImage = inputData.getString("profile_image") ?: ""
-        val content = inputData.getString("content")
-        val createdAt = inputData.getLong("created_at", System.currentTimeMillis())
-        val mediaUris = inputData.getStringArray(KEY_MEDIA_URIS)?.toList()
+    override suspend fun doWork(): Result = try {
+        coroutineScope {
 
-        // build message domain object
-        val message = Message(
-            id = id,
-            userId = userId,
-            username = username,
-            profileImage = profileImage,
-            content = content,
-            mediaUrls = emptyList(),
-            audioUrl = null,
-            createdAt = createdAt,
-            status = MessageStatus.SENDING
-        )
+            val id = inputData.getString("message_id") ?: return@coroutineScope Result.failure()
+            val userId = inputData.getString("user_id") ?: ""
+            val username = inputData.getString("username") ?: ""
+            val profileImage = inputData.getString("profile_image") ?: ""
+            val content = inputData.getString("content") ?: ""
+            val createdAt = inputData.getLong("created_at", System.currentTimeMillis())
+            val mediaUris = inputData.getStringArray(KEY_MEDIA_URIS)?.toList()
 
-        // show foreground notification
-        val notification = NotificationHelper.createUploadingNotification(applicationContext, id)
-        setForeground(ForegroundInfo(NotificationHelper.UPLOAD_NOTIFICATION_ID, notification))
+            Log.d("SendMessageWorker", "Worker input: id=$id, userId=$userId, username=$username, content=$content, mediaUris=$mediaUris")
 
-        // call use case
-        return@coroutineScope when (val result = sendMessageUseCase(message, mediaUris)) {
-            is ResultWrapper.Success -> {
-                NotificationHelper.showCompleted(applicationContext, id, success = true)
-                Result.success()
-            }
-            is ResultWrapper.Error -> {
-                NotificationHelper.showCompleted(applicationContext, id, success = false)
-                if (result.exception.code == 6) {
+
+            val message = Message(
+                id = id,
+                userId = userId,
+                username = username,
+                profileImage = profileImage,
+                content = content,
+                mediaUrls = mediaUris ?: emptyList(),
+                audioUrl = null,
+                createdAt = createdAt,
+                status = MessageStatus.SENDING
+            )
+
+            val notification = NotificationHelper.createUploadingNotification(applicationContext, id)
+            setForeground(ForegroundInfo(NotificationHelper.UPLOAD_NOTIFICATION_ID, notification))
+
+            Log.d("SendMessageWorker", "Calling SendMessageUseCase for message id=$id")
+            val result = sendMessageUseCase(message, mediaUris)
+            Log.d("SendMessageWorker", "SendMessageUseCase result: $result")
+
+            when (result) {
+                is ResultWrapper.Success -> {
+                    Log.d("SendMessageWorker", "Message sent successfully: $id")
+                    NotificationHelper.showCompleted(applicationContext, id, success = true)
+                    Result.success()
+                }
+                is ResultWrapper.Error -> {
+                    Log.e("SendMessageWorker", "Message failed to send: ${result.exception.message}, code=${result.exception.code}")
+                    NotificationHelper.showCompleted(applicationContext, id, success = false)
+                    if (result.exception.code == 6) {
+                        Log.d("SendMessageWorker", "Retrying due to transient error (code 6)")
+                        Result.retry()
+                    } else {
+                        Result.failure()
+                    }
+                }
+                is ResultWrapper.Loading -> {
+                    Log.d("SendMessageWorker", "Message sending in progress, retrying: $id")
                     Result.retry()
-                } else {
-                    Result.failure()
                 }
             }
-            is ResultWrapper.Loading -> {
-                Result.retry()
-            }
         }
+    } catch (e: Exception) {
+        Log.e("SendMessageWorker", "Unexpected error in doWork()", e)
+        Result.failure()
     }
 }

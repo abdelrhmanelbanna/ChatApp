@@ -5,6 +5,7 @@ plugins {
     id("kotlin-kapt")
     id("kotlin-parcelize")
     id("com.google.dagger.hilt.android")
+
 }
 
 android {
@@ -64,10 +65,9 @@ dependencies {
 
     // WorkManager + Hilt Integration
     implementation("androidx.work:work-runtime-ktx:2.9.0")
-    implementation("androidx.hilt:hilt-work:1.2.0")
 
-    kapt("androidx.hilt:hilt-compiler:1.2.0")
-
+    implementation("androidx.hilt:hilt-work:1.0.0")
+    kapt("androidx.hilt:hilt-compiler:1.0.0")
     // DataStore
     implementation("androidx.datastore:datastore-preferences:1.1.1")
 

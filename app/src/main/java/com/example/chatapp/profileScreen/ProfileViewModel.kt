@@ -1,5 +1,6 @@
 package com.example.chatapp.profileScreen
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.chatapp.core.datastore.DataStoreManager
@@ -35,13 +36,18 @@ class ProfileViewModel @Inject constructor(
 
     private fun uploadImage(uri: String) {
         viewModelScope.launch {
+
+            Log.e("ProfileViewModel", "Uploading image with URI: $uri")
+
             _state.update { it.copy(isLoading = true, error = null) }
 
             when (val result = uploadProfileImageUseCase(uri)) {
                 is ResultWrapper.Success -> {
+                    Log.e("ProfileViewModel", "Image uploaded successfully")
                     _state.update { it.copy(imageUri = result.data, isLoading = false) }
                 }
                 is ResultWrapper.Error -> {
+                    Log.e("ProfileViewModel", "Error uploading image: ${result.exception.message}")
                     _state.update { it.copy(isLoading = false, error = result.exception.message) }
                 }
                 else -> {}
