@@ -2,7 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    id ("kotlin-kapt")
+    id("kotlin-kapt")
     id("kotlin-parcelize")
     id("com.google.dagger.hilt.android")
 }
@@ -31,7 +31,6 @@ android {
             "SUPABASE_KEY",
             "\"${project.findProperty("SUPABASE_KEY") ?: ""}\""
         )
-
     }
 
     buildTypes {
@@ -43,6 +42,7 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -57,22 +57,22 @@ android {
 }
 
 dependencies {
-
-    // Hilt Core
+    // Hilt
     implementation("com.google.dagger:hilt-android:2.57.1")
-    kapt("com.google.dagger:hilt-android-compiler:2.57.1")
-
-    // Hilt Navigation
+    kapt("com.google.dagger:hilt-compiler:2.57.1")
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
 
     // WorkManager + Hilt Integration
     implementation("androidx.work:work-runtime-ktx:2.9.0")
     implementation("androidx.hilt:hilt-work:1.2.0")
+
     kapt("androidx.hilt:hilt-compiler:1.2.0")
 
     // DataStore
     implementation("androidx.datastore:datastore-preferences:1.1.1")
-    
+
+    // Coil (Images)
+    implementation("io.coil-kt:coil-compose:2.6.0")
 
     // UI
     implementation("androidx.compose.material3:material3:1.2.1")
@@ -90,10 +90,6 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
 
-
-    implementation("androidx.browser:browser:1.8.0")
-
-
     // Modules
     implementation(project(":data"))
     implementation(project(":domain"))
@@ -107,3 +103,5 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
+configurations.all { resolutionStrategy { force("androidx.browser:browser:1.8.0") } }
+
