@@ -3,7 +3,6 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     id ("kotlin-kapt")
-    id("org.jetbrains.kotlin.kapt")
     id("kotlin-parcelize")
     id("com.google.dagger.hilt.android")
 }
@@ -59,24 +58,29 @@ android {
 
 dependencies {
 
-    // DataStore Preferences
-    implementation("androidx.datastore:datastore-preferences:1.1.1")
-
-
+    // Hilt Core
     implementation("com.google.dagger:hilt-android:2.57.1")
-    kapt ("com.google.dagger:hilt-compiler:2.57.1")
+    kapt("com.google.dagger:hilt-android-compiler:2.57.1")
 
+    // Hilt Navigation
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
 
+    // WorkManager + Hilt Integration
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+    implementation("androidx.hilt:hilt-work:1.2.0")
+    kapt("androidx.hilt:hilt-compiler:1.2.0")
 
-    // Coil Compose
-    implementation("io.coil-kt:coil-compose:2.6.0")
+    // DataStore
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+    
 
-
-    implementation ("androidx.constraintlayout:constraintlayout-compose:1.0.1")
-    implementation("androidx.navigation:navigation-compose:2.7.7")
+    // UI
     implementation("androidx.compose.material3:material3:1.2.1")
+    implementation("androidx.constraintlayout:constraintlayout-compose:1.0.1")
+    implementation("androidx.navigation:navigation-compose:2.7.7")
+    implementation("androidx.compose.material:material-icons-extended:1.7.0")
 
+    // AndroidX & Compose BOM
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -85,8 +89,16 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+
+
+    implementation("androidx.browser:browser:1.8.0")
+
+
+    // Modules
     implementation(project(":data"))
     implementation(project(":domain"))
+
+    // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
