@@ -5,29 +5,26 @@ import android.util.Log
 import androidx.work.*
 import com.example.chatapp.chatScreen.worker.SendMessageWorker
 import com.example.domain.entity.Message
+import com.example.domain.entity.MessageStatus
 import java.util.concurrent.TimeUnit
 
 object MessageSendManager {
-    private const val KEY_ID = "message_id"
-    private const val KEY_USER_ID = "user_id"
-    private const val KEY_USERNAME = "username"
-    private const val KEY_PROFILE_IMAGE = "profile_image"
-    private const val KEY_CONTENT = "content"
-    private const val KEY_CREATED_AT = "created_at"
-    private const val KEY_MEDIA_URIS = "media_uris" // string array
 
-    fun enqueueSend(context: Context, message: Message, mediaUris: List<String>?) {
-        val data = Data.Builder().apply {
-            putString(KEY_ID, message.id)
-            putString(KEY_USER_ID, message.userId)
-            putString(KEY_USERNAME, message.username)
-            putString(KEY_PROFILE_IMAGE, message.profileImage)
-            putString(KEY_CONTENT, message.content ?: "")
-            putLong(KEY_CREATED_AT, message.createdAt)
-            if (!mediaUris.isNullOrEmpty()) {
-                putStringArray(KEY_MEDIA_URIS, mediaUris.toTypedArray())
-            }
-        }.build()
+    fun enqueueSend(
+        context: Context,
+        message: Message,
+        mediaUris: List<String>,
+        onComplete: (Message) -> Unit
+    ) {
+        val data = workDataOf(
+            "message_id" to message.id,
+            "user_id" to message.userId,
+            "username" to message.username,
+            "profile_image" to message.profileImage,
+            "content" to (message.content ?: ""),
+            "created_at" to message.createdAt,
+            "media_uris" to mediaUris.toTypedArray()
+        )
 
         val request = OneTimeWorkRequestBuilder<SendMessageWorker>()
             .setInputData(data)
@@ -35,7 +32,21 @@ object MessageSendManager {
             .addTag("send_message_${message.id}")
             .build()
 
-        WorkManager.getInstance(context.applicationContext).enqueue(request)
-    }
+        WorkManager.getInstance(context).enqueue(request)
 
+        // Observe worker state to update UI
+        WorkManager.getInstance(context)
+            .getWorkInfoByIdLiveData(request.id)
+            .observeForever { workInfo ->
+                workInfo?.let {
+                    val status = when (it.state) {
+                        WorkInfo.State.SUCCEEDED -> MessageStatus.SENT
+                        WorkInfo.State.FAILED -> MessageStatus.FAILED
+                        WorkInfo.State.RUNNING, WorkInfo.State.ENQUEUED -> MessageStatus.SENDING
+                        else -> message.status
+                    }
+                    onComplete(message.copy(status = status))
+                }
+            }
+    }
 }

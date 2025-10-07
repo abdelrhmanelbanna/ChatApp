@@ -11,4 +11,8 @@ interface MessageRepository {
     suspend fun retryMessage(message: Message): ResultWrapper<Unit>
 
     fun observeMessageStatus(messageId: String): Flow<MessageStatus>
+
+
+    suspend fun updateMessageStatus(messageId: String, status: MessageStatus)
+
 }

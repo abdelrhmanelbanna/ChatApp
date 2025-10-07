@@ -9,6 +9,7 @@ import androidx.work.WorkerParameters
 import com.example.chatapp.chatScreen.NotificationHelper
 import com.example.domain.entity.Message
 import com.example.domain.entity.MessageStatus
+import com.example.domain.repository.MessageRepository
 import com.example.domain.usecase.SendMessageUseCase
 import com.example.domain.utils.ResultWrapper
 import dagger.assisted.Assisted
@@ -19,7 +20,8 @@ import kotlinx.coroutines.coroutineScope
 class SendMessageWorker @AssistedInject constructor(
     @Assisted private val appContext: Context,
     @Assisted private val workerParams: WorkerParameters,
-    private val sendMessageUseCase: SendMessageUseCase
+    private val sendMessageUseCase: SendMessageUseCase,
+    private val messageRepository: MessageRepository
 ) : CoroutineWorker(appContext, workerParams) {
 
     companion object {
@@ -28,17 +30,13 @@ class SendMessageWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result = try {
         coroutineScope {
-
             val id = inputData.getString("message_id") ?: return@coroutineScope Result.failure()
             val userId = inputData.getString("user_id") ?: ""
             val username = inputData.getString("username") ?: ""
             val profileImage = inputData.getString("profile_image") ?: ""
             val content = inputData.getString("content") ?: ""
             val createdAt = inputData.getLong("created_at", System.currentTimeMillis())
-            val mediaUris = inputData.getStringArray(KEY_MEDIA_URIS)?.toList()
-
-            Log.d("SendMessageWorker", "Worker input: id=$id, userId=$userId, username=$username, content=$content, mediaUris=$mediaUris")
-
+            val mediaUris = inputData.getStringArray(KEY_MEDIA_URIS)?.toList() ?: emptyList()
 
             val message = Message(
                 id = id,
@@ -46,43 +44,37 @@ class SendMessageWorker @AssistedInject constructor(
                 username = username,
                 profileImage = profileImage,
                 content = if (content.isBlank()) null else content,
-                mediaUrls = mediaUris ?: emptyList(),
+                mediaUrls = mediaUris,
                 audioUrl = null,
                 createdAt = createdAt,
                 status = MessageStatus.SENDING
             )
 
-            val notification = NotificationHelper.createUploadingNotification(applicationContext, id)
+            val notification = NotificationHelper.createUploadingNotification(appContext, id)
             setForeground(ForegroundInfo(NotificationHelper.UPLOAD_NOTIFICATION_ID, notification))
 
-            Log.d("SendMessageWorker", "Calling SendMessageUseCase for message id=$id")
+            Log.d("SendMessageWorker", "Sending message id=$id")
             val result = sendMessageUseCase(message, mediaUris)
             Log.d("SendMessageWorker", "SendMessageUseCase result: $result")
 
             when (result) {
                 is ResultWrapper.Success -> {
+                    messageRepository.updateMessageStatus(id, MessageStatus.SENT)
+                    NotificationHelper.showCompleted(appContext, id, success = true)
                     Log.d("SendMessageWorker", "Message sent successfully: $id")
-                    NotificationHelper.showCompleted(applicationContext, id, success = true)
                     Result.success()
                 }
                 is ResultWrapper.Error -> {
-                    Log.e("SendMessageWorker", "Message failed to send: ${result.exception.message}, code=${result.exception.code}")
-                    NotificationHelper.showCompleted(applicationContext, id, success = false)
-                    if (result.exception.code == 6) {
-                        Log.d("SendMessageWorker", "Retrying due to transient error (code 6)")
-                        Result.retry()
-                    } else {
-                        Result.failure()
-                    }
+                    messageRepository.updateMessageStatus(id, MessageStatus.FAILED)
+                    NotificationHelper.showCompleted(appContext, id, success = false)
+                    Log.e("SendMessageWorker", "Message failed: ${result.exception.message}")
+                    if (result.exception.code == 6) Result.retry() else Result.failure()
                 }
-                is ResultWrapper.Loading -> {
-                    Log.d("SendMessageWorker", "Message sending in progress, retrying: $id")
-                    Result.retry()
-                }
+                is ResultWrapper.Loading -> Result.retry()
             }
         }
     } catch (e: Exception) {
-        Log.e("SendMessageWorker", "Unexpected error in doWork()", e)
+        Log.e("SendMessageWorker", "Unexpected error", e)
         Result.failure()
     }
 }

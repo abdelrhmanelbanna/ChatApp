@@ -40,25 +40,30 @@ class ChatViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            // Get current user from DataStore + UserRepository
+            val storedUsername = dataStoreManager.getUsername().firstOrNull() ?: "User"
+            val storedImage = dataStoreManager.getImage().firstOrNull() ?: ""
+
+
             dataStoreManager.getUserId().collectLatest { userId ->
-                val uid = userId ?: return@collectLatest
+                val uid = userId ?: UUID.randomUUID().toString()
 
                 val user = when (val result = getUserUseCase(uid)) {
-                    is ResultWrapper.Success -> result.data as? User ?: User(uid, "You", "")
-                    else -> User(uid, "You", "")
+                    is ResultWrapper.Success -> {
+                        val fetchedUser = result.data as? User
+                        fetchedUser ?: User(uid, storedUsername, storedImage)
+                    }
+                    else -> User(uid, storedUsername, storedImage)
                 }
 
                 _currentUser.value = user
-                // Update state with current user id
                 _state.update { it.copy(currentUserId = user.id) }
             }
         }
 
-        startObservingMessages()
+        observeMessages()
     }
 
-    private fun startObservingMessages() {
+    private fun observeMessages() {
         viewModelScope.launch {
             observeMessagesUseCase().collect { messages ->
                 _state.update { it.copy(messages = messages) }
@@ -86,67 +91,78 @@ class ChatViewModel @Inject constructor(
                 }
             }
 
-            is ChatIntent.SendText -> {
-                val text = intent.text.trim()
-                viewModelScope.launch {
-                    val user = currentUser ?: run {
-                        _effect.send(ChatEffect.ShowToast("User not loaded"))
-                        return@launch
-                    }
+            is ChatIntent.SendText -> sendMessage(intent.text)
 
-                    if (text.isEmpty() && _state.value.selectedMediaUris.isEmpty()) {
-                        _effect.send(ChatEffect.ShowToast("لا يمكن إرسال رسالة فارغة"))
-                        return@launch
-                    }
+            is ChatIntent.RetryMessage -> retryMessage(intent.messageId)
+        }
+    }
 
-                    val message = Message(
-                        id = UUID.randomUUID().toString(),
-                        userId = user.id,
-                        username = user.username,
-                        profileImage = user.profileImage,
-                        content = if (text.isBlank()) null else text,
-                        mediaUrls = _state.value.selectedMediaUris,
-                        audioUrl = null,
-                        createdAt = System.currentTimeMillis(),
-                        status = MessageStatus.SENDING
-                    )
+    private fun sendMessage(text: String) {
+        val user = currentUser ?: run {
+            viewModelScope.launch { _effect.send(ChatEffect.ShowToast("User not loaded")) }
+            return
+        }
 
-                    // Optimistic UI update
-                    _state.update { old ->
-                        old.copy(
-                            messages = old.messages + message,
-                            composingText = "",
-                            selectedMediaUris = emptyList()
-                        )
-                    }
+        if (text.isEmpty() && _state.value.selectedMediaUris.isEmpty()) {
+            viewModelScope.launch { _effect.send(ChatEffect.ShowToast("لا يمكن إرسال رسالة فارغة")) }
+            return
+        }
 
-                    MessageSendManager.enqueueSend(
-                        context = context,
-                        message = message,
-                        mediaUris = message.mediaUrls
-                    )
-                }
+        val message = Message(
+            id = UUID.randomUUID().toString(),
+            userId = user.id,
+            username = user.username,
+            profileImage = user.profileImage,
+            content = if (text.isBlank()) null else text,
+            mediaUrls = _state.value.selectedMediaUris,
+            audioUrl = null,
+            createdAt = System.currentTimeMillis(),
+            status = MessageStatus.SENDING
+        )
+
+        // Optimistic UI update
+        _state.update { old ->
+            old.copy(
+                messages = old.messages + message,
+                composingText = "",
+                selectedMediaUris = emptyList()
+            )
+        }
+
+        // Enqueue send with callback to update status
+        MessageSendManager.enqueueSend(
+            context = context,
+            message = message,
+            mediaUris = message.mediaUrls
+        ) { updatedMessage ->
+            _state.update { old ->
+                old.copy(
+                    messages = old.messages.map { if (it.id == updatedMessage.id) updatedMessage else it }
+                )
             }
+        }
+    }
 
-            is ChatIntent.RetryMessage -> {
-                viewModelScope.launch {
-                    val message = _state.value.messages.find { it.id == intent.messageId } ?: run {
-                        _effect.send(ChatEffect.ShowToast("الرسالة غير موجودة"))
-                        return@launch
-                    }
+    private fun retryMessage(messageId: String) {
+        val message = _state.value.messages.find { it.id == messageId } ?: run {
+            viewModelScope.launch { _effect.send(ChatEffect.ShowToast("الرسالة غير موجودة")) }
+            return
+        }
 
-                    _state.update { old ->
-                        old.copy(messages = old.messages.map {
-                            if (it.id == message.id) it.copy(status = MessageStatus.SENDING) else it
-                        })
-                    }
+        val updated = message.copy(status = MessageStatus.SENDING)
+        _state.update { old ->
+            old.copy(messages = old.messages.map { if (it.id == messageId) updated else it })
+        }
 
-                    MessageSendManager.enqueueSend(
-                        context = context,
-                        message = message,
-                        mediaUris = message.mediaUrls
-                    )
-                }
+        MessageSendManager.enqueueSend(
+            context = context,
+            message = updated,
+            mediaUris = updated.mediaUrls
+        ) { updatedMessage ->
+            _state.update { old ->
+                old.copy(
+                    messages = old.messages.map { if (it.id == updatedMessage.id) updatedMessage else it }
+                )
             }
         }
     }

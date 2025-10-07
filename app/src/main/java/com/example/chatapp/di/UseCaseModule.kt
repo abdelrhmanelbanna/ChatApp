@@ -43,4 +43,10 @@ object UseCaseModule {
     fun provideUploadProfileImageUseCase(
         userRepository: UserRepository
     ): UploadProfileImageUseCase = UploadProfileImageUseCase(userRepository)
+
+    @Provides
+    fun provideUpdateMessageStatusUseCase(
+        messageRepository: MessageRepository
+    ): UpdateMessageStatusUseCase = UpdateMessageStatusUseCase(messageRepository)
+
 }

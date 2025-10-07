@@ -14,17 +14,48 @@ class DataStoreManager(private val context: Context) {
 
     companion object {
         val USER_ID_KEY = stringPreferencesKey("user_id")
+        val USERNAME_KEY = stringPreferencesKey("username")
+
+        val IMAGE_KEY = stringPreferencesKey("image")
     }
 
-    suspend fun saveUserId(userId: String) {
+    suspend fun saveImage(imageUri: String) {
         context.dataStore.edit { prefs ->
-            prefs[USER_ID_KEY] = userId
+            prefs[IMAGE_KEY] = imageUri
         }
     }
 
-    fun getUserId(): Flow<String?> {
+     suspend fun getImage(): Flow<String?> {
         return context.dataStore.data.map { prefs ->
-            prefs[USER_ID_KEY]
+            prefs[IMAGE_KEY]
         }
     }
-}
+
+
+            suspend fun saveUserId(userId: String) {
+                context.dataStore.edit { prefs ->
+                    prefs[USER_ID_KEY] = userId
+                }
+            }
+
+            fun getUserId(): Flow<String?> {
+                return context.dataStore.data.map { prefs ->
+                    prefs[USER_ID_KEY]
+                }
+            }
+
+            suspend fun saveUsername(username: String) {
+                context.dataStore.edit { prefs ->
+                    prefs[USERNAME_KEY] = username
+                }
+            }
+
+            fun getUsername(): Flow<String?> {
+                return context.dataStore.data.map { prefs ->
+                    prefs[USERNAME_KEY]
+                }
+            }
+
+        }
+
+

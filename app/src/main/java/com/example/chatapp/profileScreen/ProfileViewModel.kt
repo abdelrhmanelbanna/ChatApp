@@ -36,20 +36,10 @@ class ProfileViewModel @Inject constructor(
 
     private fun uploadImage(uri: String) {
         viewModelScope.launch {
-
-            Log.e("ProfileViewModel", "Uploading image with URI: $uri")
-
             _state.update { it.copy(isLoading = true, error = null) }
-
             when (val result = uploadProfileImageUseCase(uri)) {
-                is ResultWrapper.Success -> {
-                    Log.e("ProfileViewModel", "Image uploaded successfully")
-                    _state.update { it.copy(imageUri = result.data, isLoading = false) }
-                }
-                is ResultWrapper.Error -> {
-                    Log.e("ProfileViewModel", "Error uploading image: ${result.exception.message}")
-                    _state.update { it.copy(isLoading = false, error = result.exception.message) }
-                }
+                is ResultWrapper.Success -> _state.update { it.copy(imageUri = result.data, isLoading = false) }
+                is ResultWrapper.Error -> _state.update { it.copy(isLoading = false, error = result.exception.message) }
                 else -> {}
             }
         }
@@ -58,24 +48,23 @@ class ProfileViewModel @Inject constructor(
     private fun saveUser() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
-
             val userId = UUID.randomUUID().toString()
             val user = User(
                 id = userId,
                 username = _state.value.username,
                 profileImage = _state.value.imageUri ?: ""
             )
-
             when (val result = saveUserUseCase(user)) {
                 is ResultWrapper.Success -> {
                     dataStoreManager.saveUserId(userId)
+                    dataStoreManager.saveUsername(_state.value.username)
+                    dataStoreManager.saveImage(_state.value.imageUri ?: "")
                     _state.update { it.copy(isLoading = false, isSaved = true) }
                 }
-                is ResultWrapper.Error -> {
-                    _state.update { it.copy(isLoading = false, error = result.exception.message) }
-                }
+                is ResultWrapper.Error -> _state.update { it.copy(isLoading = false, error = result.exception.message) }
                 else -> {}
             }
         }
     }
 }
+

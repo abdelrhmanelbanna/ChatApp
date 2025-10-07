@@ -42,4 +42,8 @@ class MessageRepositoryImpl @Inject constructor(
             }
         }
     }
+    override suspend fun updateMessageStatus(messageId: String, status: MessageStatus) {
+        messageDatasource.updateMessageStatus(messageId, status)
+    }
+
 }

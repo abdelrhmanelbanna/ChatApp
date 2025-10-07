@@ -6,6 +6,7 @@ import com.example.data.datasource.MessageDatasource
 import com.example.data.model.MessageDto
 import com.example.data.model.MessageStatusDto
 import com.example.data.webservice.SupabaseClientProvider
+import com.example.domain.entity.MessageStatus
 import com.example.domain.exceptions.DomainException
 import com.example.domain.utils.ResultWrapper
 import io.github.jan.supabase.postgrest.Postgrest
@@ -214,6 +215,19 @@ class MessageDatasourceImpl @Inject constructor(
                     updated?.status?.let { emit(it) }
                 }
             }
+        }
+    }
+
+    override suspend fun updateMessageStatus(messageId: String, status: MessageStatus) {
+        try {
+            val updatedMessage = mapOf(
+                "id" to messageId,
+                "status" to MessageStatusDto.valueOf(status.name).name
+            )
+
+            client.from("messages").update(updatedMessage)
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 
