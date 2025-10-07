@@ -10,17 +10,20 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
+import com.example.chatapp.profileScreen.ui.theme.Primary
+import com.example.chatapp.profileScreen.ui.theme.PrimaryDark
+import com.example.chatapp.profileScreen.ui.theme.PrimaryLight
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    primary = Primary,
+    secondary = PrimaryDark,
+    tertiary = PrimaryLight
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
+    primary = Primary,
+    secondary = PrimaryDark,
+    tertiary = PrimaryLight
 
     /* Other default colors to override
     background = Color(0xFFFFFBFE),

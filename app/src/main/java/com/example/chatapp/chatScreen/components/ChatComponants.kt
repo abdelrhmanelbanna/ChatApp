@@ -4,12 +4,16 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.domain.entity.Message
 import com.example.domain.entity.MessageStatus
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun ChatMessageItem(
@@ -17,6 +21,12 @@ fun ChatMessageItem(
     isMine: Boolean,
     onRetry: () -> Unit
 ) {
+
+    val timeFormat = remember {
+        SimpleDateFormat("HH:mm", Locale.getDefault())
+    }
+    val timeText = timeFormat.format(Date(message.createdAt))
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start
@@ -50,17 +60,21 @@ fun ChatMessageItem(
                 AsyncImage(model = message.mediaUrls.first(), contentDescription = "media", modifier = Modifier.height(120.dp).fillMaxWidth())
             }
 
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                when (message.status) {
-                    MessageStatus.SENDING -> Text("Sending...", style = MaterialTheme.typography.labelSmall)
-                    MessageStatus.SENT -> Text("Sent", style = MaterialTheme.typography.labelSmall)
-                    MessageStatus.FAILED -> {
-                        Text("Failed", style = MaterialTheme.typography.labelSmall)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        TextButton(onClick = onRetry) { Text("Retry") }
+            Row(modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End) {
+                Text(
+                    text = timeText,
+                    style = MaterialTheme.typography.labelSmall
+                )
+
+                if (message.status == MessageStatus.FAILED) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    TextButton(onClick = onRetry) {
+                        Text("Retry") }
+
                     }
                 }
-            }
+
         }
     }
 }
