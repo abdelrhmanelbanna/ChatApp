@@ -7,5 +7,5 @@ import com.example.domain.utils.ResultWrapper
 
 
 class GetUserUseCase (private val repository: UserRepository) {
-    suspend operator fun invoke(): ResultWrapper<User> = repository.getUser()
+    suspend operator fun invoke(userId: String): ResultWrapper<User> = repository.getUser()
 }

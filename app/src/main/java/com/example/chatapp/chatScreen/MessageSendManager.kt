@@ -24,13 +24,10 @@ object MessageSendManager {
             putString(KEY_PROFILE_IMAGE, message.profileImage)
             putString(KEY_CONTENT, message.content ?: "")
             putLong(KEY_CREATED_AT, message.createdAt)
-            if (mediaUris != null && mediaUris.isNotEmpty()) {
+            if (!mediaUris.isNullOrEmpty()) {
                 putStringArray(KEY_MEDIA_URIS, mediaUris.toTypedArray())
             }
         }.build()
-
-
-        Log.d("MessageSendManager", "EnqueueSend with data: $data")
 
         val request = OneTimeWorkRequestBuilder<SendMessageWorker>()
             .setInputData(data)
@@ -38,7 +35,7 @@ object MessageSendManager {
             .addTag("send_message_${message.id}")
             .build()
 
-        val appContext = context.applicationContext
-        WorkManager.getInstance(appContext).enqueue(request)
+        WorkManager.getInstance(context.applicationContext).enqueue(request)
     }
+
 }

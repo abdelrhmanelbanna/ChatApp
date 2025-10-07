@@ -1,4 +1,3 @@
-// package com.example.chatapp.chatScreen
 package com.example.chatapp.chatScreen
 
 import android.content.Context
@@ -18,7 +17,6 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
-import android.content.Context as AppContext
 import dagger.hilt.android.qualifiers.ApplicationContext
 
 @HiltViewModel
@@ -37,33 +35,33 @@ class ChatViewModel @Inject constructor(
     private val _effect = Channel<ChatEffect>(Channel.BUFFERED)
     val effects = _effect.receiveAsFlow()
 
-    // current user as StateFlow to always get latest value
     private val _currentUser = MutableStateFlow<User?>(null)
     private val currentUser: User? get() = _currentUser.value
 
     init {
         viewModelScope.launch {
-            // collect user id from DataStore and fetch user details
-            dataStoreManager.getUserId().collect { id ->
-                val safeId = id ?: UUID.randomUUID().toString()
+            // Get current user from DataStore + UserRepository
+            dataStoreManager.getUserId().collectLatest { userId ->
+                val uid = userId ?: return@collectLatest
 
-                val user: User = when (val r = getUserUseCase()) {
-                    is ResultWrapper.Success -> r.data as? User ?: User(safeId, "You", "")
-                    else -> User(safeId, "You", "")
+                val user = when (val result = getUserUseCase(uid)) {
+                    is ResultWrapper.Success -> result.data as? User ?: User(uid, "You", "")
+                    else -> User(uid, "You", "")
                 }
 
                 _currentUser.value = user
+                // Update state with current user id
+                _state.update { it.copy(currentUserId = user.id) }
             }
-
-
-            startObservingMessages()
         }
+
+        startObservingMessages()
     }
 
     private fun startObservingMessages() {
         viewModelScope.launch {
-            observeMessagesUseCase().collect { list ->
-                _state.update { it.copy(messages = list) }
+            observeMessagesUseCase().collect { messages ->
+                _state.update { it.copy(messages = messages) }
             }
         }
     }
@@ -91,12 +89,15 @@ class ChatViewModel @Inject constructor(
             is ChatIntent.SendText -> {
                 val text = intent.text.trim()
                 viewModelScope.launch {
+                    val user = currentUser ?: run {
+                        _effect.send(ChatEffect.ShowToast("User not loaded"))
+                        return@launch
+                    }
+
                     if (text.isEmpty() && _state.value.selectedMediaUris.isEmpty()) {
                         _effect.send(ChatEffect.ShowToast("لا يمكن إرسال رسالة فارغة"))
                         return@launch
                     }
-
-                    val user = currentUser ?: User(UUID.randomUUID().toString(), "You", "")
 
                     val message = Message(
                         id = UUID.randomUUID().toString(),
@@ -104,13 +105,13 @@ class ChatViewModel @Inject constructor(
                         username = user.username,
                         profileImage = user.profileImage,
                         content = if (text.isBlank()) null else text,
-                        mediaUrls = emptyList(),
+                        mediaUrls = _state.value.selectedMediaUris,
                         audioUrl = null,
                         createdAt = System.currentTimeMillis(),
                         status = MessageStatus.SENDING
                     )
 
-                    // Optimistic UI
+                    // Optimistic UI update
                     _state.update { old ->
                         old.copy(
                             messages = old.messages + message,
@@ -122,7 +123,7 @@ class ChatViewModel @Inject constructor(
                     MessageSendManager.enqueueSend(
                         context = context,
                         message = message,
-                        mediaUris = _state.value.selectedMediaUris
+                        mediaUris = message.mediaUrls
                     )
                 }
             }
@@ -134,10 +135,11 @@ class ChatViewModel @Inject constructor(
                         return@launch
                     }
 
-                    val updated = _state.value.messages.map {
-                        if (it.id == message.id) it.copy(status = MessageStatus.SENDING) else it
+                    _state.update { old ->
+                        old.copy(messages = old.messages.map {
+                            if (it.id == message.id) it.copy(status = MessageStatus.SENDING) else it
+                        })
                     }
-                    _state.update { it.copy(messages = updated) }
 
                     MessageSendManager.enqueueSend(
                         context = context,

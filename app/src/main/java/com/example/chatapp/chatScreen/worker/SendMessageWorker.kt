@@ -45,7 +45,7 @@ class SendMessageWorker @AssistedInject constructor(
                 userId = userId,
                 username = username,
                 profileImage = profileImage,
-                content = content,
+                content = if (content.isBlank()) null else content,
                 mediaUrls = mediaUris ?: emptyList(),
                 audioUrl = null,
                 createdAt = createdAt,
