@@ -87,7 +87,7 @@ class ChatViewModel @Inject constructor(
                 val limited = intent.uris.take(10)
                 _state.update { it.copy(selectedMediaUris = limited) }
                 if (intent.uris.size > 10) {
-                    viewModelScope.launch { _effect.send(ChatEffect.ShowToast("يمكن إرسال حتى 10 صور فقط")) }
+                    viewModelScope.launch { _effect.send(ChatEffect.ShowToast("You can send up to 10 photos only")) }
                 }
             }
 
@@ -104,7 +104,7 @@ class ChatViewModel @Inject constructor(
         }
 
         if (text.isEmpty() && _state.value.selectedMediaUris.isEmpty()) {
-            viewModelScope.launch { _effect.send(ChatEffect.ShowToast("لا يمكن إرسال رسالة فارغة")) }
+            viewModelScope.launch { _effect.send(ChatEffect.ShowToast("Empty message cannot be sent")) }
             return
         }
 
@@ -143,9 +143,9 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    private fun retryMessage(messageId: String) {
+    public fun retryMessage(messageId: String) {
         val message = _state.value.messages.find { it.id == messageId } ?: run {
-            viewModelScope.launch { _effect.send(ChatEffect.ShowToast("الرسالة غير موجودة")) }
+            viewModelScope.launch { _effect.send(ChatEffect.ShowToast("Message not found")) }
             return
         }
 

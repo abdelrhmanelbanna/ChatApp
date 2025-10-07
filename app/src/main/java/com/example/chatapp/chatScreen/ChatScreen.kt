@@ -97,11 +97,11 @@ fun ChatScreen(viewModel: ChatViewModel = hiltViewModel(), modifier: Modifier = 
             // preview selected images
             if (state.selectedMediaUris.isNotEmpty()) {
                 Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
-                    Text("${state.selectedMediaUris.size} صورة مختارة")
+                    Text("${state.selectedMediaUris.size}Choosed photo")
                 }
             }
 
-            // composer (متعرف تحت)
+
             ComposerArea(
                 composingText = state.composingText,
                 onTextChange = { viewModel.process(ChatIntent.UpdateComposingText(it)) },
