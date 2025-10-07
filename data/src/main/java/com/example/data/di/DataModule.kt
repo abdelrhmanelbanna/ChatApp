@@ -49,10 +49,11 @@ object DataModule {
     @Provides
     @Singleton
     fun provideSupabaseClientProvider(
+        @ApplicationContext context: Context,
         @Named("supabaseUrl") supabaseUrl: String,
         @Named("supabaseKey") supabaseKey: String
     ): SupabaseClientProvider {
-        return SupabaseClientProvider(supabaseUrl, supabaseKey)
+        return SupabaseClientProvider(context, supabaseUrl, supabaseKey)
     }
 
     @Provides

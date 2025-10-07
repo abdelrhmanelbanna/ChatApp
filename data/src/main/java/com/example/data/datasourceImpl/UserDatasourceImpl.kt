@@ -11,6 +11,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.storage.Storage
+import java.util.UUID
 import javax.inject.Inject
 
 
@@ -48,8 +49,10 @@ class UserDatasourceImpl @Inject constructor(
                 ?: return ResultWrapper.Error(DomainException.UnknownException("Invalid image"))
 
             val bytes = inputStream.use { it.readBytes() }
-            val path = "${parsedUri.lastPathSegment ?: System.currentTimeMillis()}.jpg"
 
+
+            val path = "profile_${UUID.randomUUID()}.jpg"
+            println("Uploading image -> path=$path, bytes=${bytes.size}")
 
             storage.from("profile").upload(path, bytes)
 
@@ -58,6 +61,7 @@ class UserDatasourceImpl @Inject constructor(
 
             ResultWrapper.Success(url)
         } catch (e: Exception) {
+            e.printStackTrace()
             ResultWrapper.Error(DomainException.UnknownException(e.message ?: "Upload failed"))
         }
     }
